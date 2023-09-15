@@ -1,0 +1,118 @@
+const myModal = new bootstrap.Modal("#transaction-modal");
+let logged = sessionStorage.getItem('logged');
+const session = localStorage.getItem('session');
+let data = JSON.parse(localStorage.getItem(logged));
+
+document.getElementById('button-logout').addEventListener('click', logout);
+
+document.getElementById('transaction-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const value = parseFloat(document.getElementById('value-input').value);
+    const description = document.getElementById('description-input').value;
+    const date = document.getElementById('date-input').value;
+    const type = document.querySelector('input[name="type-input"]:checked').value;
+
+    let canExecute = checkBalanceBeforeTransaction(value, type);
+    if(canExecute){
+        data.transactions.unshift({
+            value: value,
+            type: type,
+            description: description,
+            date: date
+        });
+    
+        saveData(data);
+        e.target.reset();
+        myModal.hide();
+    
+        getTransactions();
+        updateBalance(value, type);
+    
+        alert('Lançamento adicionado com sucesso!');
+    }else{
+        alert('Atenção. Seu saldo ficará negativo após esse lançamento.');
+    }
+
+    
+});
+
+checkLogged();
+
+function checkLogged() {
+    if (session) {
+        sessionStorage.setItem('logged', session);
+        logged = session;
+    }
+
+    if (!logged) {
+        window.location.href = 'index.html';
+        return;
+    }
+
+    const dataUser = localStorage.getItem(logged);
+
+    if (dataUser) {
+        data = JSON.parse(dataUser);
+    }
+
+    getTransactions();
+}
+
+function logout() {
+    sessionStorage.removeItem('logged');
+    localStorage.removeItem('session');
+
+    window.location.href = 'index.html';
+}
+
+function getTransactions() {
+    const transactions = data.transactions;
+    let transactionsHTML = ``;
+
+    if (transactions.length) {
+        transactions.forEach((item) => {
+            let type = 'Entrada';
+
+            if (item.type === '2') {
+                type = 'Saída';
+            }
+
+            transactionsHTML += `
+            <tr>
+                <th scope="row">${item.date}</th>
+                <td>${item.value.toFixed(2)}</td>
+                <td>${type}</td>
+                <td>${item.description}</td>
+            </tr>
+        `
+        })
+    }
+
+    document.getElementById('transactions-list').innerHTML = transactionsHTML;
+}
+
+function saveData(data) {
+    localStorage.setItem(data.email, JSON.stringify(data));
+}
+
+updateBalance()
+
+function updateBalance(valor, tipo) {
+    if (tipo === '1') {
+        data.balance += valor;
+    } else if (tipo === '2') {
+        data.balance -= valor;
+    }
+}
+
+
+function checkBalanceBeforeTransaction(valor, tipo){
+    let saldo = data.balance;
+    if (tipo === '2') {
+        if (saldo - valor < 0) {
+            return false;
+        }
+    }
+    return true;
+}
